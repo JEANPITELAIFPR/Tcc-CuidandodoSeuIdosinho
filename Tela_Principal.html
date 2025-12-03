@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendário e Diário de Bordo</title>
+    <style>
+        body{
+            font-family: Arial, Helvetica, sans-serif;
+            background-image: linear-gradient(to right, rgb(20, 147, 220), rgb(17, 54, 71));
+            margin: 0;
+            padding: 0;
+            color: white;
+        }
+        .container{
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding: 30px;
+        }
+        .calendar, .diary{
+            background-color: rgba(0,0,0,0.6);
+            padding: 20px;
+            border-radius: 15px;
+            width: 45%;
+        }
+        .calendar h2, .diary h2{
+            text-align: center;
+        }
+        .calendar-header{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        table{
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td{
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        td:hover{
+            background-color: rgba(255,255,255,0.2);
+        }
+        .today{
+            background-color: #ffffff !important;
+            color: black;
+            font-weight: bold;
+            border-radius: 50%;
+        }
+        .reminder-box{
+            margin-top: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        textarea{
+            width: 100%;
+            height: 300px;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 14px;
+            border: none;
+            outline: none;
+        }
+        button{
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            background-color: dodgerblue;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        button:hover{
+            background-color: deepskyblue;
+        }
+        #clock{
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .nav-btn{
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: white;
+            cursor: pointer;
+        }
+        .nav-btn:hover{
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Calendário -->
+        <div class="calendar">
+            <div class="calendar-header">
+                <button class="nav-btn" onclick="changeMonth(-1)">&#9664;</button>
+                <h2 id="calendarTitle"></h2>
+                <button class="nav-btn" onclick="changeMonth(1)">&#9654;</button>
+            </div>
+            <div id="clock"></div>
+            <div id="calendar"></div>
+            <div class="reminder-box">
+                <h3>Lembretes do dia: <span id="selectedDateLabel">Nenhum selecionado</span></h3>
+                <textarea id="reminderText" placeholder="Escreva seu lembrete aqui..."></textarea>
+                <button onclick="saveReminder()">Salvar Lembrete</button>
+            </div>
+        </div>
+
+        <!-- Diário de Bordo -->
+        <div class="diary">
+            <h2>Diário de Bordo</h2>
+            <textarea id="diaryText" placeholder="Anotações do dia a dia do idoso..."></textarea>
+            <button onclick="saveDiary()">Salvar Diário</button>
+        </div>
+    </div>
+
+    <script>
+        // Relógio em tempo real (Horário de Brasília)
+        function updateClock(){
+            let now = new Date();
+            let options = { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            let time = new Intl.DateTimeFormat('pt-BR', options).format(now);
+            document.getElementById("clock").innerText = "Horário de Brasília: " + time;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        const calendarDiv = document.getElementById("calendar");
+        const calendarTitle = document.getElementById("calendarTitle");
+        let selectedDate = null;
+
+        // Estado do calendário
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+
+        function generateCalendar(month, year){
+            let today = new Date();
+            let todayDay = today.getDate();
+            let todayMonth = today.getMonth();
+            let todayYear = today.getFullYear();
+
+            const monthNames = [
+                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+            ];
+
+            // Título do calendário
+            calendarTitle.innerText = `${monthNames[month]} de ${year}`;
+
+            let firstDay = new Date(year, month, 1).getDay();
+            let daysInMonth = new Date(year, month+1, 0).getDate();
+
+            let table = "<table><tr>";
+            let daysOfWeek = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+            for(let d of daysOfWeek){
+                table += "<th>"+d+"</th>";
+            }
+            table += "</tr><tr>";
+
+            for(let i=0; i<firstDay; i++){
+                table += "<td></td>";
+            }
+
+            for(let day=1; day<=daysInMonth; day++){
+                if((firstDay + day - 1) % 7 === 0){
+                    table += "</tr><tr>";
+                }
+
+                let cssClass = "";
+                if(day === todayDay && month === todayMonth && year === todayYear){
+                    cssClass = "today";
+                }
+
+                table += `<td class="${cssClass}" onclick="selectDate(${day},${month+1},${year})">${day}</td>`;
+            }
+
+            table += "</tr></table>";
+            calendarDiv.innerHTML = table;
+        }
+
+        function changeMonth(offset){
+            currentMonth += offset;
+            if(currentMonth > 11){
+                currentMonth = 0;
+                currentYear++;
+            }else if(currentMonth < 0){
+                currentMonth = 11;
+                currentYear--;
+            }
+            generateCalendar(currentMonth, currentYear);
+        }
+
+        generateCalendar(currentMonth, currentYear);
+
+        // Selecionar data e carregar lembretes
+        function selectDate(day, month, year){
+            selectedDate = `${day}-${month}-${year}`;
+            document.getElementById("selectedDateLabel").innerText = selectedDate;
+            let saved = localStorage.getItem(selectedDate);
+            document.getElementById("reminderText").value = saved ? saved : "";
+        }
+
+        // Salvar lembrete
+        function saveReminder(){
+            if(selectedDate){
+                let text = document.getElementById("reminderText").value;
+                localStorage.setItem(selectedDate, text);
+                alert("Lembrete salvo para " + selectedDate);
+            }else{
+                alert("Selecione uma data no calendário primeiro!");
+            }
+        }
+
+        // Salvar diário
+        function saveDiary(){
+            let today = new Date().toLocaleDateString('pt-BR');
+            let text = document.getElementById("diaryText").value;
+            localStorage.setItem("diario-"+today, text);
+            alert("Diário salvo para hoje ("+today+")!");
+        }
+    </script>
+</body>
+</html>
